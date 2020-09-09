@@ -13,6 +13,10 @@ class StarWarHomePage extends Component {
     }
 
     componentDidMount() {
+        this.fetchDataForFirstPage();
+    }
+
+    fetchDataForFirstPage = () => {
         fetch('https://swapi.dev/api/people/')
             .then( response => response.json())
             .then( result => {
@@ -20,13 +24,52 @@ class StarWarHomePage extends Component {
                     this.dataFetchWithNextURL(result, 1);
                 }
                 else {
-                    this.dataFetchVisitedPage(result, 1);
+                    this.dataFetchWithOutNextURL(result, 1);
                 }
             })
             .catch(err => console.log(err));
     }
 
-    dataFetchVisitedPage = (result, pageClicked) => {
+    dataFetchWithNextURL = (peopleResult, pageClicked) => {
+        //console.log('next URL is present');
+        console.log('dataFetchWithNextURL');
+        console.log(peopleResult);
+        const peopleWithSpecies = peopleResult.results.map( (eachObj) => {
+            if(eachObj.species[0] !== undefined) {
+                return eachObj.species[0];
+            }
+            return null;
+        });
+        const urls = peopleWithSpecies.filter( (url) => url!=null);
+
+        let finalPeople = [];
+        Promise.all( urls.map((url)=>fetch(url)))
+            .then( responses => Promise.all(responses.map( (response) => response.json())))
+            .then( results => {
+                finalPeople = peopleResult.results.map( (eachObj) => {
+                    let replaceInd = 0;
+                    if (eachObj.species[0]) {
+                        eachObj = {...eachObj, ['species']: results[replaceInd].name};
+                        replaceInd++;
+                    }
+                    else {
+                        eachObj = {...eachObj, ['species']: null}
+                    }
+                    return eachObj;
+                })
+                console.log(finalPeople);
+                this.setState( (prevState) => {
+                    return {
+                        people: finalPeople,
+                        nextURL: peopleResult.next,
+                        noOfPages: prevState.noOfPages + 1,
+                        visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
+                    }
+                });
+            })
+    }
+
+    dataFetchWithOutNextURL = (result, pageClicked) => {
         this.setState( {
             people: result.results,
             nextURL: result.next,
@@ -34,74 +77,75 @@ class StarWarHomePage extends Component {
         });
     }
 
-    dataFetchWithNextURL = (result, pageClicked) => {
-        //console.log('next URL is present');
-        this.setState( (prevState) => {
-            return {
-                people: result.results,
-                nextURL: result.next,
-                noOfPages: prevState.noOfPages + 1,
-                visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
-            }
-        });
-    }
-
-    fetchDataForVisitedPageAtLeastOnce = (pageClicked) => {
+    fetchDataForVisitedPage = (pageClicked) => {
+        console.log('show first page');
         const url = `http://swapi.dev/api/people/?page=${pageClicked}`;
         fetch(url)
             .then(response => response.json())
             .then( result => {
-                this.dataFetchVisitedPage(result, pageClicked);
+                this.setState( {
+                    people: result.results,
+                    visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
+                });
             })
     }
 
     fetchPeopleData = (pageClicked) => {
-        //nextURL is present
-        if(this.state.nextURL) {
-            //unvisited pages   -visiting for the first time
-            //this condition is, just to make sure if the pageClick number and page number in nextURL are same
-            //if not, fetch might be called on nextURL with wrong pageClick number ex.,nextURL having /?page=2 and pageClick=1 which is visited one,
-            //then, fetch happens on nextURl with page number 2, which should not happen
-            if(this.state.nextURL.includes(`page=${pageClicked}`)) {
-                //console.log('next URL matched with the pageClick')
+        console.log(pageClicked);
+            if(this.state.visitedPages.includes(pageClicked) ) {
+                //nextURL is null, on click of last page returns nextURL as null, so then this will executes
+                console.log('nextURL is there but clicked on already visited page');
+                this.fetchDataForVisitedPage(pageClicked);
+            }
+            else {
+                console.log('else');
+                console.log(this.state.nextURL);
                 fetch(this.state.nextURL)
                     .then(response => response.json())
                     .then(result => {
                         //next URL is present
+                        console.log(result);
                         if(result.next) {
                             this.dataFetchWithNextURL(result, pageClicked);
                         }
-                        //next URL is not present
+                        //next URL is null
                         else {
-                            //console.log('NEXT URL is NOT PRESENT');
-                            this.dataFetchVisitedPage(result, pageClicked);
+                            this.dataFetchWithOutNextURL(result, pageClicked);
                         }
                     })
                     .catch(err => console.log(err));
             }
-            else {
-                //re-visiting the page more than once before checking all the pages
-                //re-visiting the same page more than once
-                //console.log('next url is present but not matching with the nextURL page number & pageClick');
-                this.fetchDataForVisitedPageAtLeastOnce(pageClicked);
-            }
+    }
+
+    fetchOnSearchName = (name) => {
+        if(name) {
+            fetch(`https://swapi.dev/api/people/?search=${name}`)
+                .then(response => response.json())
+                .then(result => this.setState({
+                    people: result.results,
+                    noOfPages: 1,
+                    nextURL: '',
+                    visitedPages: []
+                }));
         }
-        //nextURL is null, on click of last page returns nextURL as null, so then this will executes
         else {
-            console.log('nextURL is there but clicked on already visited page');
-            this.fetchDataForVisitedPageAtLeastOnce(pageClicked);
+            this.fetchDataForFirstPage();
         }
     }
 
+
     render() {
         console.log('visitedPages arr ', this.state.visitedPages);
-        console.log(this.state.nextURL);
+        //console.log(this.state.nextURL);
         const people = this.state.people;
-        //console.log(people);
+        console.log(people);
         //console.log(this.state.nextURL);
         return (
             <div>
-                <PeopleTable people={people} nextURL={this.state.nextURL} noOfPages={this.state.noOfPages} fetchPeopleData={this.fetchPeopleData} />
+                <PeopleTable people={people}
+                             noOfPages={this.state.noOfPages}
+                             fetchPeopleData = {this.fetchPeopleData}
+                             fetchOnSearchName={this.fetchOnSearchName} />
             </div>
         );
     }

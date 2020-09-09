@@ -4,41 +4,36 @@ import {Table, Button} from "antd";
 import 'antd/dist/antd.css';
 import { SearchOutlined } from '@ant-design/icons';
 import '../styles/people-table.css';
-import {isEmpty} from "lodash";
+import {faAmbulance, faAngry, faHands, faHome} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default class PeopleTable extends Component {
-
     state = {
         searchName: '',
-        nameFound: {},
-        top: 'topLeft',
-        bottom: 'totalbottomRight',
         current: 1
     }
 
     handleSearchName = () => {
-        this.setState({ loading: false}, () => {
-            fetch(`https://swapi.dev/api/people/?search=${this.state.searchName}`)
-                .then(response => response.json())
-                .then(result => this.setState({
-                    nameFound: result.results
-                }, () => console.log(this.state.nameFound)))
-        })
+        this.props.fetchOnSearchName(this.state.searchName);
     }
 
     handleNameChange = (e) => {
         this.setState({searchName: e.target.value}, () => {
             if(this.state.searchName === '') {
-                this.setState( {
-                    nameFound: {}
-                }, () => this.props.fetchPeopleData());
+                this.setState({
+                    sortedInfo: null,
+                });
+                this.props.fetchOnSearchName(this.state.searchName)
             }
-        })
+        });
     }
 
-    handlePageChange = (pagination, filters, sorter, extra) => {
-        //console.log('handlePageChange');
-        if(this.state.current !== pagination.current && this.state.current ) {
+    handlePageChange = (pagination, filters, sorter) => {
+        this.setState( {
+            sortedInfo: sorter
+        }, () => console.log(this.state.sortedInfo));
+
+        if(this.state.current !== pagination.current) {
             this.setState( {
                 current: pagination.current
             }, () => this.props.fetchPeopleData(this.state.current));
@@ -46,20 +41,23 @@ export default class PeopleTable extends Component {
     }
 
     render() {
-        //console.log('render method in PeopleTable');
+        let { sortedInfo } = this.state;
+        sortedInfo = sortedInfo || {};
         const columns = [
             {
                 title: 'Name',
                 dataIndex: 'name',
                 key: 'name',
-                sorter: (a, b) => a.name.length - b.name.length,
-                sortDirections: ['descend'],
+                sorter: (a, b) => a.name.localeCompare(b.name),
+                sortDirections: ['ascend', 'descend'],
+                sortOrder: sortedInfo.columnKey === 'name' && sortedInfo.order,
             },
             {
                 title: 'Height',
                 dataIndex: 'height',
                 key: 'height',
                 sorter: (a, b) => a.height - b.height,
+                sortOrder: sortedInfo.columnKey === 'height' && sortedInfo.order,
             },
             {
                 title: 'Mass',
@@ -122,7 +120,17 @@ export default class PeopleTable extends Component {
             {
                 title: 'species',
                 dataIndex: 'species',
-                key: 'species'
+                key: 'species',
+                render: (species) => {
+                    switch (species) {
+                        case 'Droid':
+                            return <FontAwesomeIcon icon={faAmbulance} />;
+                        case 'Human':
+                            return <FontAwesomeIcon icon={faHands} />;
+                        default:
+                            return <FontAwesomeIcon icon={faHome} />
+                    }
+                }
             },
             {
                 title: 'vehicles',
@@ -173,8 +181,7 @@ export default class PeopleTable extends Component {
                 sorter: (a, b) => a.url.length - b.url.length,
             }
         ];
-        const { people, nextURL, noOfPages } =this.props;
-        //console.log('peopleTable ', nextURL);
+        const { people, noOfPages } =this.props;
         return (
             <div>
                 <div className={'name-search'}>
@@ -188,11 +195,11 @@ export default class PeopleTable extends Component {
                     </Button>
                 </div>
                 {
-                    isEmpty(this.state.nameFound) ? <Table columns={columns} dataSource={people}
-                                                           pagination={{ position: [this.state.top, this.state.bottom], total: noOfPages*10 }}
-                                                           onChange={ this.handlePageChange}
-                        /> :
-                        <Table columns={columns} dataSource={this.state.nameFound} />
+                    <Table columns={columns}
+                           dataSource={people}
+                           pagination={{ total: noOfPages*10 }}
+                           onChange={this.handlePageChange}
+                    />
                 }
             </div>
         )
