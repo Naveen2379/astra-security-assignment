@@ -59,7 +59,9 @@ class StarWarHomePage extends Component {
         //nextURL is present
         if(this.state.nextURL) {
             //unvisited pages   -visiting for the first time
-            //this condition is required, when
+            //this condition is, just to make sure if the pageClick number and page number in nextURL are same
+            //if not, fetch might be called on nextURL with wrong pageClick number ex.,nextURL having /?page=2 and pageClick=1 which is visited one,
+            //then, fetch happens on nextURl with page number 2, which should not happen
             if(this.state.nextURL.includes(`page=${pageClicked}`)) {
                 //console.log('next URL matched with the pageClick')
                 fetch(this.state.nextURL)
