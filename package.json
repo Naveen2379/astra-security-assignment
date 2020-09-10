@@ -32,8 +32,10 @@
     ]
   },
   "devDependencies": {
+
     "@ant-design/icons": "^4.2.2",
     "@fortawesome/fontawesome-svg-core": "^1.2.30",
+    "@fortawesome/free-brands-svg-icons": "^5.14.0",
     "@fortawesome/free-solid-svg-icons": "^5.14.0",
     "@fortawesome/react-fontawesome": "^0.1.11",
     "antd": "^4.6.3",

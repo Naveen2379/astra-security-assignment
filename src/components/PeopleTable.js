@@ -4,13 +4,16 @@ import {Table, Button} from "antd";
 import 'antd/dist/antd.css';
 import { SearchOutlined } from '@ant-design/icons';
 import '../styles/people-table.css';
-import {faAmbulance, faAngry, faHands, faHome} from "@fortawesome/free-solid-svg-icons";
+import {faExclamationTriangle, faQuestion, faSpinner, faUserCircle} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {faAndroid} from "@fortawesome/free-brands-svg-icons";
+import {isEmpty} from "lodash";
 
 export default class PeopleTable extends Component {
     state = {
         searchName: '',
-        current: 1
+        current: 1,
+        sortedInfo: null
     }
 
     handleSearchName = () => {
@@ -22,20 +25,22 @@ export default class PeopleTable extends Component {
             if(this.state.searchName === '') {
                 this.setState({
                     sortedInfo: null,
-                });
-                this.props.fetchOnSearchName(this.state.searchName)
+                }, () => this.props.fetchOnSearchName(this.state.searchName));
             }
         });
     }
 
     handlePageChange = (pagination, filters, sorter) => {
+        console.log('current page ', pagination.current);
+
         this.setState( {
             sortedInfo: sorter
         }, () => console.log(this.state.sortedInfo));
 
         if(this.state.current !== pagination.current) {
             this.setState( {
-                current: pagination.current
+                current: pagination.current,
+                sortedInfo: null
             }, () => this.props.fetchPeopleData(this.state.current));
         }
     }
@@ -64,42 +69,49 @@ export default class PeopleTable extends Component {
                 dataIndex: 'mass',
                 key: 'mass',
                 sorter: (a, b) => a.mass - b.mass,
+                sortOrder: sortedInfo.columnKey === 'mass' && sortedInfo.order,
             },
             {
                 title: 'hair_color',
                 dataIndex: 'hair_color',
                 key: 'hair_color',
                 sorter: (a, b) => a.hair_color.length - b.hair_color.length,
+                sortOrder: sortedInfo.columnKey === 'hair_color' && sortedInfo.order,
             },
             {
                 title: 'skin_color',
                 dataIndex: 'skin_color',
                 key: 'skin_color',
                 sorter: (a, b) => a.skin_color.length - b.skin_color.length,
+                sortOrder: sortedInfo.columnKey === 'skin_color' && sortedInfo.order,
             },
             {
                 title: 'eye_color',
                 dataIndex: 'eye_color',
                 key: 'eye_color',
                 sorter: (a, b) => a.eye_color.length - b.eye_color.length,
+                sortOrder: sortedInfo.columnKey === 'eye_color' && sortedInfo.order,
             },
             {
                 title: 'birth_year',
                 dataIndex: 'birth_year',
                 key: 'birth_year',
                 sorter: (a, b) => a.birth_year.length - b.birth_year.length,
+                sortOrder: sortedInfo.columnKey === 'birth_year' && sortedInfo.order,
             },
             {
                 title: 'gender',
                 dataIndex: 'gender',
                 key: 'gender',
                 sorter: (a, b) => a.gender.length - b.gender.length,
+                sortOrder: sortedInfo.columnKey === 'gender' && sortedInfo.order,
             },
             {
                 title: 'homeworld',
                 dataIndex: 'homeworld',
                 key: 'homeworld',
                 sorter: (a, b) => a.homeworld.length - b.homeworld.length,
+                sortOrder: sortedInfo.columnKey === 'homeworld' && sortedInfo.order,
             },
             {
                 title: 'films',
@@ -124,11 +136,11 @@ export default class PeopleTable extends Component {
                 render: (species) => {
                     switch (species) {
                         case 'Droid':
-                            return <FontAwesomeIcon icon={faAmbulance} />;
+                            return <FontAwesomeIcon icon={faAndroid} />;
                         case 'Human':
-                            return <FontAwesomeIcon icon={faHands} />;
+                            return <FontAwesomeIcon icon={faUserCircle} />;
                         default:
-                            return <FontAwesomeIcon icon={faHome} />
+                            return <FontAwesomeIcon icon={faQuestion} />
                     }
                 }
             },
@@ -179,6 +191,7 @@ export default class PeopleTable extends Component {
                 dataIndex: 'url',
                 key: 'url',
                 sorter: (a, b) => a.url.length - b.url.length,
+                sortOrder: sortedInfo.columnKey === 'url' && sortedInfo.order,
             }
         ];
         const { people, noOfPages } =this.props;
@@ -194,12 +207,17 @@ export default class PeopleTable extends Component {
                     >
                     </Button>
                 </div>
+                {isEmpty(people) ? <FontAwesomeIcon icon={faExclamationTriangle} size="6x"/> : ''}
                 {
-                    <Table columns={columns}
-                           dataSource={people}
-                           pagination={{ total: noOfPages*10 }}
-                           onChange={this.handlePageChange}
-                    />
+                    this.props.loading ? <FontAwesomeIcon icon={faSpinner} size="6x" /> : <div>
+                        {
+                            isEmpty(people) ? <FontAwesomeIcon icon={faExclamationTriangle} size="6x"/> : <Table columns={columns}
+                                                                                                                 dataSource={people}
+                                                                                                                 pagination={{ total: noOfPages*10 }}
+                                                                                                                 onChange={this.handlePageChange}/>
+                        }
+                    </div>
+
                 }
             </div>
         )

@@ -1,5 +1,8 @@
 import React, {Component} from 'react';
 import PeopleTable from "./PeopleTable";
+import {faExclamationCircle, faExclamationTriangle, faSpinner} from "@fortawesome/free-solid-svg-icons";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {isEmpty} from "lodash";
 
 class StarWarHomePage extends Component {
     constructor(props) {
@@ -8,7 +11,9 @@ class StarWarHomePage extends Component {
             people: [],
             nextURL: '',
             noOfPages: 1,
-            visitedPages: []
+            visitedPages: [],
+            loading: false,
+            errorOccured: false
         }
     }
 
@@ -17,7 +22,8 @@ class StarWarHomePage extends Component {
     }
 
     fetchDataForFirstPage = () => {
-        fetch('https://swapi.dev/api/people/')
+        //fetch('https://swapi.dev/api/people/')
+        fetch('http://swapi.dev/api/people/?page=10')
             .then( response => response.json())
             .then( result => {
                 if(result.next) {
@@ -27,26 +33,31 @@ class StarWarHomePage extends Component {
                     this.dataFetchWithOutNextURL(result, 1);
                 }
             })
-            .catch(err => console.log(err));
+            .catch(err => {
+                console.log(err);
+             this.setState({
+                 errorOccured: true
+             })
+            });
     }
 
-    dataFetchWithNextURL = (peopleResult, pageClicked) => {
-        //console.log('next URL is present');
-        console.log('dataFetchWithNextURL');
-        console.log(peopleResult);
+    fetchURLsFromSpecies = (peopleResult) => {
         const peopleWithSpecies = peopleResult.results.map( (eachObj) => {
             if(eachObj.species[0] !== undefined) {
                 return eachObj.species[0];
             }
             return null;
         });
-        const urls = peopleWithSpecies.filter( (url) => url!=null);
-
-        let finalPeople = [];
-        Promise.all( urls.map((url)=>fetch(url)))
+        const extractedURLs = peopleWithSpecies.filter( (url) => url!=null);
+        console.log('fetchURLsFromSpecies function');
+        console.log(peopleResult);
+        console.log(extractedURLs);
+        let finalPeopleResult = [];
+        const finalResultPromise = Promise.all( extractedURLs.map((url)=>fetch(url)))
             .then( responses => Promise.all(responses.map( (response) => response.json())))
             .then( results => {
-                finalPeople = peopleResult.results.map( (eachObj) => {
+                console.log(results);
+                finalPeopleResult = peopleResult.results.map( (eachObj) => {
                     let replaceInd = 0;
                     if (eachObj.species[0]) {
                         eachObj = {...eachObj, ['species']: results[replaceInd].name};
@@ -57,49 +68,60 @@ class StarWarHomePage extends Component {
                     }
                     return eachObj;
                 })
-                console.log(finalPeople);
-                this.setState( (prevState) => {
-                    return {
-                        people: finalPeople,
-                        nextURL: peopleResult.next,
-                        noOfPages: prevState.noOfPages + 1,
-                        visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
-                    }
-                });
+                console.log(finalPeopleResult);
+                return finalPeopleResult;
+            })
+            return finalResultPromise;
+    }
+
+    dataFetchWithNextURL = (peopleResult, pageClicked) => {
+        //console.log('next URL is present');
+        this.fetchURLsFromSpecies(peopleResult)
+            .then(finalPeopleResult => {
+                return this.setState( (prevState) => {
+                 return {
+                     people: finalPeopleResult,
+                     nextURL: peopleResult.next,
+                     noOfPages: prevState.noOfPages + 1,
+                     visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
+                 }
+             })
             })
     }
 
-    dataFetchWithOutNextURL = (result, pageClicked) => {
-        this.setState( {
-            people: result.results,
-            nextURL: result.next,
-            visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
-        });
-    }
-
-    fetchDataForVisitedPage = (pageClicked) => {
-        console.log('show first page');
-        const url = `http://swapi.dev/api/people/?page=${pageClicked}`;
-        fetch(url)
-            .then(response => response.json())
-            .then( result => {
-                this.setState( {
-                    people: result.results,
+    dataFetchWithOutNextURL = (peopleResult, pageClicked) => {
+        this.fetchURLsFromSpecies(peopleResult)
+            .then(finalPeopleResult => {
+                this.setState({
+                    people: finalPeopleResult.results,
+                    nextURL: peopleResult.next,
                     visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
                 });
             })
     }
 
+    fetchDataForVisitedPage = (pageClicked) => {
+        const url = `http://swapi.dev/api/people/?page=${pageClicked}`;
+        fetch(url)
+            .then(response => response.json())
+            .then( peopleResult => {
+                this.fetchURLsFromSpecies(peopleResult)
+                    .then(finalPeopleResult => {
+                        console.log(finalPeopleResult);
+                        this.setState({
+                            people: finalPeopleResult,
+                            visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
+                        });
+                    })
+            })
+    }
+
     fetchPeopleData = (pageClicked) => {
-        console.log(pageClicked);
             if(this.state.visitedPages.includes(pageClicked) ) {
                 //nextURL is null, on click of last page returns nextURL as null, so then this will executes
-                console.log('nextURL is there but clicked on already visited page');
                 this.fetchDataForVisitedPage(pageClicked);
             }
             else {
-                console.log('else');
-                console.log(this.state.nextURL);
                 fetch(this.state.nextURL)
                     .then(response => response.json())
                     .then(result => {
@@ -118,34 +140,43 @@ class StarWarHomePage extends Component {
     }
 
     fetchOnSearchName = (name) => {
-        if(name) {
-            fetch(`https://swapi.dev/api/people/?search=${name}`)
-                .then(response => response.json())
-                .then(result => this.setState({
-                    people: result.results,
-                    noOfPages: 1,
-                    nextURL: '',
-                    visitedPages: []
-                }));
-        }
-        else {
-            this.fetchDataForFirstPage();
-        }
+            if(name) {
+                this.setState({
+                    loading: true
+                }, () => {
+                    fetch(`https://swapi.dev/api/people/?search=${name}`)
+                        .then(response => response.json())
+                        .then(result => this.setState({
+                            loading: false,
+                            people: result.results,
+                            noOfPages: 1,
+                            nextURL: '',
+                            visitedPages: []
+                        }));
+                })
+            }
+            else {
+                this.fetchDataForFirstPage();
+            }
     }
+
 
 
     render() {
         console.log('visitedPages arr ', this.state.visitedPages);
-        //console.log(this.state.nextURL);
-        const people = this.state.people;
+        const {people, errorOccured} = this.state;
         console.log(people);
-        //console.log(this.state.nextURL);
         return (
             <div>
-                <PeopleTable people={people}
-                             noOfPages={this.state.noOfPages}
-                             fetchPeopleData = {this.fetchPeopleData}
-                             fetchOnSearchName={this.fetchOnSearchName} />
+                {
+                    errorOccured ? <FontAwesomeIcon icon={faExclamationCircle} size="6x" /> :
+                        <PeopleTable people={people}
+                                     loading={this.state.loading}
+                                     noOfPages={this.state.noOfPages}
+                                     fetchPeopleData = {this.fetchPeopleData}
+                                     fetchOnSearchName={this.fetchOnSearchName}
+                        />
+                }
             </div>
         );
     }
