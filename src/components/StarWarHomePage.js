@@ -3,6 +3,10 @@ import PeopleTable from "./PeopleTable";
 import {faExclamationCircle, faExclamationTriangle, faSpinner} from "@fortawesome/free-solid-svg-icons";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {isEmpty} from "lodash";
+import {Button, Col, Input, Row} from "antd";
+import {SearchOutlined} from "@ant-design/icons";
+import '../styles/StarWarHomePage.css';
+
 
 class StarWarHomePage extends Component {
     constructor(props) {
@@ -22,8 +26,7 @@ class StarWarHomePage extends Component {
     }
 
     fetchDataForFirstPage = () => {
-        //fetch('https://swapi.dev/api/people/')
-        fetch('http://swapi.dev/api/people/?page=10')
+        fetch('https://swapi.dev/api/people/')
             .then( response => response.json())
             .then( result => {
                 if(result.next) {
@@ -35,9 +38,9 @@ class StarWarHomePage extends Component {
             })
             .catch(err => {
                 console.log(err);
-             this.setState({
-                 errorOccured: true
-             })
+                this.setState({
+                    errorOccured: true
+                });
             });
     }
 
@@ -49,14 +52,11 @@ class StarWarHomePage extends Component {
             return null;
         });
         const extractedURLs = peopleWithSpecies.filter( (url) => url!=null);
-        console.log('fetchURLsFromSpecies function');
-        console.log(peopleResult);
-        console.log(extractedURLs);
         let finalPeopleResult = [];
-        const finalResultPromise = Promise.all( extractedURLs.map((url)=>fetch(url)))
+        let finalResultPromise;
+        finalResultPromise = Promise.all( extractedURLs.map((url)=>fetch(url)))
             .then( responses => Promise.all(responses.map( (response) => response.json())))
             .then( results => {
-                console.log(results);
                 finalPeopleResult = peopleResult.results.map( (eachObj) => {
                     let replaceInd = 0;
                     if (eachObj.species[0]) {
@@ -68,14 +68,12 @@ class StarWarHomePage extends Component {
                     }
                     return eachObj;
                 })
-                console.log(finalPeopleResult);
                 return finalPeopleResult;
             })
             return finalResultPromise;
     }
 
     dataFetchWithNextURL = (peopleResult, pageClicked) => {
-        //console.log('next URL is present');
         this.fetchURLsFromSpecies(peopleResult)
             .then(finalPeopleResult => {
                 return this.setState( (prevState) => {
@@ -107,7 +105,6 @@ class StarWarHomePage extends Component {
             .then( peopleResult => {
                 this.fetchURLsFromSpecies(peopleResult)
                     .then(finalPeopleResult => {
-                        console.log(finalPeopleResult);
                         this.setState({
                             people: finalPeopleResult,
                             visitedPages: [...new Set([...this.state.visitedPages, pageClicked])]
@@ -118,28 +115,30 @@ class StarWarHomePage extends Component {
 
     fetchPeopleData = (pageClicked) => {
             if(this.state.visitedPages.includes(pageClicked) ) {
-                //nextURL is null, on click of last page returns nextURL as null, so then this will executes
                 this.fetchDataForVisitedPage(pageClicked);
             }
             else {
                 fetch(this.state.nextURL)
                     .then(response => response.json())
                     .then(result => {
-                        //next URL is present
-                        console.log(result);
                         if(result.next) {
                             this.dataFetchWithNextURL(result, pageClicked);
                         }
-                        //next URL is null
                         else {
                             this.dataFetchWithOutNextURL(result, pageClicked);
                         }
                     })
-                    .catch(err => console.log(err));
+                    .catch(err => {
+                        console.log(err)
+                        this.setState({
+                            errorOccured: true
+                        });
+                    });
             }
     }
 
-    fetchOnSearchName = (name) => {
+    fetchOnSearchName = () => {
+        const name = this.state.searchName;
             if(name) {
                 this.setState({
                     loading: true
@@ -151,7 +150,8 @@ class StarWarHomePage extends Component {
                             people: result.results,
                             noOfPages: 1,
                             nextURL: '',
-                            visitedPages: []
+                            visitedPages: [],
+                            errorOccured: false
                         }));
                 })
             }
@@ -160,24 +160,52 @@ class StarWarHomePage extends Component {
             }
     }
 
+    handleNameChange = (e) => {
+        this.setState({searchName: e.target.value}, () => {
+            /*if (this.state.searchName === '') {
+                this.props.fetchDataForFirstPage();
+            }*/
+        })
+    }
 
 
     render() {
-        console.log('visitedPages arr ', this.state.visitedPages);
-        const {people, errorOccured} = this.state;
-        console.log(people);
+        const {people, errorOccured, loading} = this.state;
         return (
-            <div>
-                {
-                    errorOccured ? <FontAwesomeIcon icon={faExclamationCircle} size="6x" /> :
-                        <PeopleTable people={people}
-                                     loading={this.state.loading}
-                                     noOfPages={this.state.noOfPages}
-                                     fetchPeopleData = {this.fetchPeopleData}
-                                     fetchOnSearchName={this.fetchOnSearchName}
-                        />
-                }
-            </div>
+            <Col className={'search-table-style'}>
+                <Row className={'name-search'}>
+                    <Row className={'search-button'}>
+                        <Input type={'text'}
+                               value={this.state.searchName}
+                               placeholder={'enter name to search'}
+                               onChange={this.handleNameChange} />
+                        <Button
+                            onClick={this.fetchOnSearchName}
+                            icon={<SearchOutlined />}
+                            style={{ width: 30, height: 30, border: "none" }}
+                        >
+                        </Button>
+                    </Row>
+                </Row>
+                <Row className={'table-style'}>
+                    {
+                        errorOccured ? <FontAwesomeIcon icon={faExclamationCircle} size="6x" /> :
+                            <div>
+                                {
+                                    loading ? <FontAwesomeIcon icon={faSpinner} size="6x" /> :
+                                    <div>{
+                                        isEmpty(people) ? <FontAwesomeIcon icon={faExclamationTriangle} size="6x" /> :
+                                            <PeopleTable people={people}
+                                                         noOfPages={this.state.noOfPages}
+                                                         fetchPeopleData={this.fetchPeopleData}
+                                            />
+                                    }
+                                    </div>
+                                }
+                            </div>
+                    }
+                </Row>
+            </Col>
         );
     }
 }

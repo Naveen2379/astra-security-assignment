@@ -1,0 +1,15 @@
+.name-search {
+    justify-content: center;
+    padding: 20px;
+    background: aliceblue;
+}
+
+.search-button {
+    flex-direction: column;
+    height: 50px;
+    justify-content: center;
+}
+
+.table-style {
+    justify-content: center;
+}

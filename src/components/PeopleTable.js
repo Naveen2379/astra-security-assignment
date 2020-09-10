@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
 import 'react-bootstrap-table-next/dist/react-bootstrap-table2.min.css';
-import {Table, Button} from "antd";
+import {Table} from "antd";
 import 'antd/dist/antd.css';
-import { SearchOutlined } from '@ant-design/icons';
+
 import '../styles/people-table.css';
-import {faExclamationTriangle, faQuestion, faSpinner, faUserCircle} from "@fortawesome/free-solid-svg-icons";
+import { faQuestion, faUserCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {faAndroid} from "@fortawesome/free-brands-svg-icons";
-import {isEmpty} from "lodash";
+
 
 export default class PeopleTable extends Component {
     state = {
@@ -16,26 +16,10 @@ export default class PeopleTable extends Component {
         sortedInfo: null
     }
 
-    handleSearchName = () => {
-        this.props.fetchOnSearchName(this.state.searchName);
-    }
-
-    handleNameChange = (e) => {
-        this.setState({searchName: e.target.value}, () => {
-            if(this.state.searchName === '') {
-                this.setState({
-                    sortedInfo: null,
-                }, () => this.props.fetchOnSearchName(this.state.searchName));
-            }
-        });
-    }
-
     handlePageChange = (pagination, filters, sorter) => {
-        console.log('current page ', pagination.current);
-
         this.setState( {
             sortedInfo: sorter
-        }, () => console.log(this.state.sortedInfo));
+        });
 
         if(this.state.current !== pagination.current) {
             this.setState( {
@@ -196,30 +180,13 @@ export default class PeopleTable extends Component {
         ];
         const { people, noOfPages } =this.props;
         return (
-            <div>
-                <div className={'name-search'}>
-                    <input type={'text'} value={this.state.searchName} placeholder={'enter name to search'}
-                           onChange={this.handleNameChange} />
-                    <Button
-                        onClick={this.handleSearchName}
-                        icon={<SearchOutlined />}
-                        style={{ width: 30, height: 30, border: "none" }}
-                    >
-                    </Button>
-                </div>
-                {isEmpty(people) ? <FontAwesomeIcon icon={faExclamationTriangle} size="6x"/> : ''}
-                {
-                    this.props.loading ? <FontAwesomeIcon icon={faSpinner} size="6x" /> : <div>
-                        {
-                            isEmpty(people) ? <FontAwesomeIcon icon={faExclamationTriangle} size="6x"/> : <Table columns={columns}
-                                                                                                                 dataSource={people}
-                                                                                                                 pagination={{ total: noOfPages*10 }}
-                                                                                                                 onChange={this.handlePageChange}/>
-                        }
-                    </div>
-
-                }
-            </div>
+                <Table columns={columns}
+                       dataSource={people}
+                       pagination={{ total: noOfPages*10 }}
+                       onChange={this.handlePageChange}
+                       rowKey={'name'}
+                       bordered
+                />
         )
     }
 }
