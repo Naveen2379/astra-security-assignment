@@ -13,3 +13,8 @@
 .table-style {
     justify-content: center;
 }
+
+.site-card-border-less-wrapper {
+    padding: 30px;
+    background: #ececec;
+}
