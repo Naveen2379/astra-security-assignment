@@ -6,6 +6,7 @@ import {isEmpty} from "lodash";
 import {Button, Col, Input, Row, Card} from "antd";
 import {SearchOutlined} from "@ant-design/icons";
 import '../styles/StarWarHomePage.css';
+const { Search } = Input;
 
 
 class StarWarHomePage extends Component {
@@ -159,6 +160,7 @@ class StarWarHomePage extends Component {
     }
 
     fetchOnSearchName = () => {
+
         const name = this.state.searchName;
             if(name) {
                 this.setState({
@@ -172,7 +174,8 @@ class StarWarHomePage extends Component {
                             noOfPages: 1,
                             nextURL: '',
                             visitedPages: [],
-                            errorOccured: false
+                            errorOccured: false,
+                            speciesCountObj: {}
                         }));
                 })
             }
@@ -189,26 +192,29 @@ class StarWarHomePage extends Component {
 
     render() {
         const {speciesCountObj, people, errorOccured, loading} = this.state;
-        const speciesCount = <div>{
-            Object.keys(speciesCountObj).map( (element) => {
+        const speciesCount = <div>
+            {
+                Object.keys(speciesCountObj).map( (element) => {
                 return <p key={element}><b>{element}</b>: <span>{speciesCountObj[element]}</span></p>
-            })
-        }</div>
+                })
+            }
+        </div>
+
         return (
-            <Col classpeciesCountsName={'search-table-style'}>
+            <Col className={'search-table-counter-card'}>
                 <Row className={'name-search'}>
                     <Row className={'search-button'}>
-                        <Input type={'text'}
-                               value={this.state.searchName}
-                               placeholder={'enter name to search'}
-                               onChange={this.handleNameChange} />
-                        <Button
-                            onClick={this.fetchOnSearchName}
-                            icon={<SearchOutlined />}
-                            style={{ width: 30, height: 30, border: "none" }}
-                        >
-                        </Button>
-                    </Row>
+                            <Input type={'text'}
+                                   style={ { width: 300, height: 50}}
+                                   value={this.state.searchName}
+                                   placeholder={'enter name to search'}
+                                   onChange={this.handleNameChange} />
+                            <Button
+                                onClick={this.fetchOnSearchName}
+                                icon={<SearchOutlined />}
+                                style={{ width: 50, height: 50, border: "none" }}
+                            />
+                        </Row>
                 </Row>
                 <Row className={'table-style'}>
                     {
@@ -228,13 +234,15 @@ class StarWarHomePage extends Component {
                             </>
                     }
                 </Row>
-                <Row>
-                    <div className="site-card-border-less-wrapper">
-                        <Card title="Count Card" bordered={false} style={{ width: 300 }}>
-                            <p><b>results: </b>{people.length}</p>
-                            <div>{speciesCount}</div>
-                        </Card>
-                    </div>,
+                <Row className={'count-card'}>
+                    { isEmpty(speciesCountObj) ? '' :
+                        <div className="site-card-border-less-wrapper">
+                            <Card title="Count Card" bordered={false} style={{ width: 300 }}>
+                                <p><b>results: </b>{people.length}</p>
+                                <div>{speciesCount}</div>
+                            </Card>
+                        </div>
+                    }
                 </Row>
             </Col>
         );

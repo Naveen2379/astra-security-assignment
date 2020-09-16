@@ -1,20 +1,52 @@
+.search-table-counter-card {
+
+}
+
+
 .name-search {
     justify-content: center;
     padding: 20px;
     background: aliceblue;
 }
 
-.search-button {
-    flex-direction: column;
-    height: 50px;
-    justify-content: center;
+.ant-table-wrapper {
+    background: gainsboro;
 }
-
 .table-style {
     justify-content: center;
 }
 
 .site-card-border-less-wrapper {
-    padding: 30px;
+    padding: 10px;
     background: #ececec;
 }
+
+.ant-btn {
+    background: #1890ff;
+    width: 50px;
+    height: 48px;
+}
+
+Input {
+    width: 300px;
+    height: 50px;
+}
+
+.ant-col {
+    max-width: max-content;
+}
+
+.count-card {
+    justify-content: center;
+    background: beige;
+    padding: 10px;
+}
+
+.ant-table {
+    background: gainsboro;
+}
+
+/*.ant-table-cell {
+    font-weight: bold;
+}*/
+
